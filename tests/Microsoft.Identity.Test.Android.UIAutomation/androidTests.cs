@@ -58,20 +58,20 @@ namespace Microsoft.Identity.Test.UIAutomation
         {
             var tests = new List<Action>()
             {
-                AcquireTokenTest,
-                AcquireTokenSilentTest,
+                //AcquireTokenTest,
+                //AcquireTokenSilentTest,
 
-                AcquireTokenADFSV3InteractiveFederatedTest,
-                AcquireTokenADFSV4InteractiveFederatedTest,
-                AcquireTokenADFSV2019InteractiveFederatedTest,
+                //AcquireTokenADFSV3InteractiveFederatedTest,
+                AcquireTokenADFSV4InteractiveFederatedTest
+                //AcquireTokenADFSV2019InteractiveFederatedTest,
 
-                B2CLocalAccountAcquireTokenTest,
-                //B2CFacebookMicrosoftLoginAcquireTokenTest,
-                B2CLocalEditPolicyAcquireTokenTest,
+                //B2CLocalAccountAcquireTokenTest,
+                ////B2CFacebookMicrosoftLoginAcquireTokenTest,
+                //B2CLocalEditPolicyAcquireTokenTest,
                
-                //B2CGoogleB2CLoginAcquireTokenTest,
-                //B2CGoogleMicrosoftLoginAcquireTokenTest,                
-                //B2CFacebookB2CLoginAcquireTokenTest,
+                ////B2CGoogleB2CLoginAcquireTokenTest,
+                ////B2CGoogleMicrosoftLoginAcquireTokenTest,                
+                ////B2CFacebookB2CLoginAcquireTokenTest,
             };
 
             var hasFailed = false;
