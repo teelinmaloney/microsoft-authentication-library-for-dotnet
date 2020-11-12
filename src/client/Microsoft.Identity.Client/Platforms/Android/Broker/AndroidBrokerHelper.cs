@@ -469,8 +469,10 @@ namespace Microsoft.Identity.Client.Platforms.Android.Broker
         private Intent GetInteractiveBrokerIntent(BrokerRequest brokerRequest, Intent brokerIntent)
         {
             ValidateBrokerRedirectURI(brokerRequest);
-            brokerIntent.PutExtra(BrokerConstants.BrokerRequestV2, JsonHelper.SerializeToJson(brokerRequest));
+            var request = JsonHelper.SerializeToJson(brokerRequest);
+            brokerIntent.PutExtra(BrokerConstants.BrokerRequestV2, request);
 
+            _logger.Info("MSAL.Xamarin interactive broker request: " + request);
             return brokerIntent;
         }
 
@@ -478,9 +480,11 @@ namespace Microsoft.Identity.Client.Platforms.Android.Broker
         {
             ValidateBrokerRedirectURI(brokerRequest);
             Bundle bundle = new Bundle();
-            bundle.PutString(BrokerConstants.BrokerRequestV2, JsonHelper.SerializeToJson(brokerRequest));
+            var request = JsonHelper.SerializeToJson(brokerRequest);
+            bundle.PutString(BrokerConstants.BrokerRequestV2, request);
             bundle.PutInt(BrokerConstants.CallerInfoUID, Binder.CallingUid);
 
+            _logger.Info("MSAL.Xamarin interactive broker request: " + request);
             return bundle;
         }
 
@@ -639,5 +643,6 @@ namespace Microsoft.Identity.Client.Platforms.Android.Broker
 
             return string.Empty;
         }
+#pragma warning restore CA1305
     }
 }
