@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Security.Authentication.Web.Core;
 using Windows.Security.Credentials;
 using Windows.UI.ApplicationSettings;
+using WinRT;
 
 namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
 {
@@ -15,19 +17,38 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
     {
         public static IAsyncOperation<WebTokenRequestResult> RequestTokenForWindowAsync(IntPtr hWnd, WebTokenRequest request)
         {
-            IWebAuthenticationCoreManagerInterop webAuthenticationCoreManagerInterop = (IWebAuthenticationCoreManagerInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(WebAuthenticationCoreManager));
-            //Guid guid = typeof(WebAuthenticationCoreManager).GetInterface("IWebAuthenticationCoreManager").GUID;
-            Guid guid = typeof(IAsyncOperation<WebTokenRequestResult>).GUID;
+            IWebAuthenticationCoreManagerInterop webAuthenticationCoreManagerInterop =
+                WebAuthenticationCoreManager.As<IWebAuthenticationCoreManagerInterop>();
+            Guid guid = WinRT.GuidGenerator.CreateIID(typeof(IAsyncOperation<WebTokenRequestResult>));
 
-            return webAuthenticationCoreManagerInterop.RequestTokenForWindowAsync(hWnd, request, ref guid);
+            var requestPtr = MarshalInspectable<WebTokenRequest>.FromManaged(request);
+
+            webAuthenticationCoreManagerInterop.RequestTokenForWindowAsync(
+               hWnd,
+               requestPtr,
+               ref guid,
+               out IntPtr result);
+
+            return MarshalInterface<IAsyncOperation<WebTokenRequestResult>>.FromAbi(result);
         }
-        public static IAsyncOperation<WebTokenRequestResult> RequestTokenWithWebAccountForWindowAsync(IntPtr hWnd, WebTokenRequest request, WebAccount webAccount)
+
+        public static IAsyncOperation<WebTokenRequestResult> RequestTokenWithWebAccountForWindowAsync(
+            IntPtr hWnd, WebTokenRequest request, WebAccount webAccount)
         {
-            IWebAuthenticationCoreManagerInterop webAuthenticationCoreManagerInterop = (IWebAuthenticationCoreManagerInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(WebAuthenticationCoreManager));
-            Guid guid = typeof(IAsyncOperation<WebTokenRequestResult>).GUID;
+            IWebAuthenticationCoreManagerInterop webAuthenticationCoreManagerInterop =
+                WebAuthenticationCoreManager.As<IWebAuthenticationCoreManagerInterop>();
+            Guid guid = WinRT.GuidGenerator.CreateIID(typeof(IAsyncOperation<WebTokenRequestResult>));
+            
+            var requestPtr = MarshalInspectable<WebTokenRequest>.FromManaged(request);
+            var webAccountPtr = MarshalInspectable<WebAccount>.FromManaged(webAccount);
+            webAuthenticationCoreManagerInterop.RequestTokenWithWebAccountForWindowAsync(
+                hWnd,
+                requestPtr, 
+                webAccountPtr, 
+                ref guid, 
+                out IntPtr result);
 
-            return webAuthenticationCoreManagerInterop.RequestTokenWithWebAccountForWindowAsync(hWnd, request, webAccount, ref guid);
-
+            return MarshalInterface<IAsyncOperation<WebTokenRequestResult>>.FromAbi(result);
         }
     }
 
@@ -50,47 +71,30 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
     //        /* [iid_is][retval][out] */ void **asyncInfo) = 0;
     //};
     [System.Runtime.InteropServices.Guid("F4B8E804-811E-4436-B69C-44CB67B72084")]
-    [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIInspectable)]
+    [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown)]
+    [System.Runtime.InteropServices.ComImport]
     internal interface IWebAuthenticationCoreManagerInterop
     {
-        IAsyncOperation<WebTokenRequestResult> RequestTokenForWindowAsync(IntPtr appWindow, WebTokenRequest request, [System.Runtime.InteropServices.In] ref Guid riid);
-        IAsyncOperation<WebTokenRequestResult> RequestTokenWithWebAccountForWindowAsync(IntPtr appWindow, WebTokenRequest request, WebAccount webAccount, [System.Runtime.InteropServices.In] ref Guid riid);
-    }
+        // Note: Invoking methods on ComInterfaceType.InterfaceIsIInspectable interfaces
+        // no longer appears supported in the runtime (probably with removal of WinRT support),
+        // so simulate with IUnknown.
+        void GetIids(out int iidCount, out IntPtr iids);
+        void GetRuntimeClassName(out IntPtr className);
+        void GetTrustLevel(out WinRT.TrustLevel trustLevel);
 
-    [System.Runtime.InteropServices.Guid("67A7C5CA-83F6-44C6-A3B1-0EB69E41FA8A")]
-    [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIInspectable)]
-    internal interface IWebTokenResponse
-    {
-        //
-        // Summary:
-        //     Gets the properties of the response
-        //
-        // Returns:
-        //     The properties of the response.
-        IDictionary<string, string> Properties { get; }
-        //
-        // Summary:
-        //     Gets the error returned by the provider, if any.
-        //
-        // Returns:
-        //     The error returned by the provider.
-        WebProviderError ProviderError { get; }
-        //
-        // Summary:
-        //     Gets the authentication token.
-        //
-        // Returns:
-        //     The authentication token.
-        string Token { get; }
-        //
-        // Summary:
-        //     Gets the web account for the request.
-        //
-        // Returns:
-        //     The web account for the request.
-        WebAccount WebAccount { get; }
-    }
+        void RequestTokenForWindowAsync(
+            IntPtr appWindow,
+            IntPtr request, // WebTokenRequest
+            ref Guid riid, 
+            out IntPtr result); // IAsyncOperation<WebTokenRequestResult>
 
+        void RequestTokenWithWebAccountForWindowAsync(
+            IntPtr appWindow,
+            IntPtr request, // WebTokenRequest
+            IntPtr webAccount, // WebAccount
+            ref Guid riid, 
+            out IntPtr result); // IAsyncOperation<WebTokenRequestResult>
+    }
 
     //------------------------IAccountsSettingsPaneInterop----------------------------
     //MIDL_INTERFACE("D3EE12AD-3865-4362-9746-B75A682DF0E6")
@@ -111,13 +115,21 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
     //        /* [iid_is][retval][out] */ __RPC__deref_out_opt void** asyncAction) = 0;
     //};
     [System.Runtime.InteropServices.Guid("D3EE12AD-3865-4362-9746-B75A682DF0E6")]
-    [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIInspectable)]
+    [System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown)]
+    [System.Runtime.InteropServices.ComImport]
     internal interface IAccountsSettingsPaneInterop
     {
+        // Note: Invoking methods on ComInterfaceType.InterfaceIsIInspectable interfaces
+        // no longer appears supported in the runtime (probably with removal of WinRT support),
+        // so simulate with IUnknown.
+        void GetIids(out int iidCount, out IntPtr iids);
+        void GetRuntimeClassName(out IntPtr className);
+        void GetTrustLevel(out WinRT.TrustLevel trustLevel);
+
         [STAThread]
-        AccountsSettingsPane GetForWindow(IntPtr appWindow, [System.Runtime.InteropServices.In] ref Guid riid);
-        IAsyncAction ShowManagedAccountsForWindowAsync(IntPtr appWindow, [System.Runtime.InteropServices.In] ref Guid riid);
-        IAsyncAction ShowAddAccountForWindowAsync(IntPtr appWindow, [System.Runtime.InteropServices.In] ref Guid riid);
+        void GetForWindow(IntPtr appWindow,  ref Guid riid, out IntPtr result);
+
+        void ShowAddAccountForWindowAsync(IntPtr appWindow,  ref Guid riid, out IntPtr result);
     }
 
     //Helper to initialize AccountsSettingsPane
@@ -126,26 +138,41 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
         [STAThread]
         public static AccountsSettingsPane GetForWindow(IntPtr hWnd)
         {
-            IAccountsSettingsPaneInterop accountsSettingsPaneInterop = (IAccountsSettingsPaneInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(AccountsSettingsPane));
-            Guid guid = typeof(AccountsSettingsPane).GetInterface("IAccountsSettingsPane").GUID;
+            IAccountsSettingsPaneInterop accountsSettingsPaneInterop =
+                AccountsSettingsPane.As<IAccountsSettingsPaneInterop>();
+            //Guid guid = typeof(AccountsSettingsPane).GUID;
+            Guid guid = WinRT.GuidGenerator.CreateIID(typeof(AccountsSettingsPane));
+           
 
-            var result = accountsSettingsPaneInterop.GetForWindow(hWnd, ref guid);
 
-            return result;
+            //IAccountsSettingsPaneInterop accountsSettingsPaneInterop = 
+            //    (IAccountsSettingsPaneInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(AccountsSettingsPane));
+            //Guid guid = typeof(AccountsSettingsPane).GetInterface("IAccountsSettingsPane").GUID;
+
+            accountsSettingsPaneInterop.GetForWindow(hWnd, ref guid, out IntPtr result);
+            return MarshalInterface<AccountsSettingsPane>.FromAbi(result);
         }
-        public static IAsyncAction ShowManagedAccountsForWindowAsync(IntPtr hWnd)
-        {
-            IAccountsSettingsPaneInterop accountsSettingsPaneInterop = (IAccountsSettingsPaneInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(AccountsSettingsPane));
-            Guid guid = typeof(IAsyncAction).GUID;
 
-            return accountsSettingsPaneInterop.ShowManagedAccountsForWindowAsync(hWnd, ref guid);
-        }
         public static IAsyncAction ShowAddAccountForWindowAsync(IntPtr hWnd)
         {
-            IAccountsSettingsPaneInterop accountsSettingsPaneInterop = (IAccountsSettingsPaneInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(AccountsSettingsPane));
-            Guid guid = typeof(IAsyncAction).GUID;
+            IWebAuthenticationCoreManagerInterop webAuthenticationCoreManagerInterop =
+                WebAuthenticationCoreManager.As<IWebAuthenticationCoreManagerInterop>();
+            
 
-            return accountsSettingsPaneInterop.ShowAddAccountForWindowAsync(hWnd, ref guid);
+
+            IAccountsSettingsPaneInterop accountsSettingsPaneInterop =
+                AccountsSettingsPane.As<IAccountsSettingsPaneInterop>();
+            //Guid guid = typeof(IAsyncAction).GUID;
+            Guid guid = WinRT.GuidGenerator.CreateIID(typeof(IAsyncAction));
+
+            //IAccountsSettingsPaneInterop accountsSettingsPaneInterop = 
+            //    (IAccountsSettingsPaneInterop)WindowsRuntimeMarshal.GetActivationFactory(typeof(AccountsSettingsPane));
+            //Guid guid = typeof(IAsyncAction).GUID;
+
+            accountsSettingsPaneInterop.ShowAddAccountForWindowAsync(hWnd, ref guid, out IntPtr result);
+
+            return MarshalInterface<IAsyncAction>.FromAbi(result);
+
         }
     }
 #endif

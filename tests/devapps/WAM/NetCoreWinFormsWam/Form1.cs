@@ -68,6 +68,8 @@ namespace NetCoreWinFormsWAM
             var pca = PublicClientApplicationBuilder
                 .Create(clientId)
                 .WithAuthority(this.authorityCbx.Text)
+               // .WithRedirectUri("http://localhost")
+                .WithExperimentalFeatures(true)
                 .WithBroker(this.useBrokerChk.Checked)
                 // there is no need to construct the PCA with this redirect URI, 
                 // but WAM uses it. We could enforce it.
@@ -244,6 +246,7 @@ namespace NetCoreWinFormsWAM
             AuthenticationResult result = null;
 
             var builder = pca.AcquireTokenInteractive(GetScopes())
+                .WithUseEmbeddedWebView(false)
                 .WithPrompt(GetPrompt());
 
             if (!string.IsNullOrEmpty(loginHint))

@@ -228,5 +228,19 @@ namespace Microsoft.Identity.Client.Platforms.netcore
         {
             return Environment.OSVersion.Platform == PlatformID.Unix;
         }
+
+        public override bool CanBrokerSupportSilentAuth()
+        {
+            return true;
+        }
+
+        public override IBroker CreateBroker(CoreUIParent uiParent)
+        {
+#if NET_CORE_DESKTOP
+            return new Features.WamBroker.WamBroker(uiParent, Logger);
+#else
+            return new NullBroker();
+#endif
+        }
     }
 }

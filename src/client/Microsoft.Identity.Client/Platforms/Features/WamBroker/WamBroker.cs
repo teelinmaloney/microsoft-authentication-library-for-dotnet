@@ -478,6 +478,9 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                     return Enumerable.Empty<IAccount>();
                 }
 
+                await Task.Delay(0).ConfigureAwait(false);
+                
+
                 var aadAccounts = await _aadPlugin.GetAccountsAsync(clientID).ConfigureAwait(false);
                 var msaAccounts = await _msaPlugin.GetAccountsAsync(clientID).ConfigureAwait(false);
 

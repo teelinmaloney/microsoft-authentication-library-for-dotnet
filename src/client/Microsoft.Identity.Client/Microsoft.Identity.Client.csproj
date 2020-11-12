@@ -2,8 +2,9 @@
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);RUNTIME</DefineConstants>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == '$(TargetFrameworkNetCore)' ">
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(TargetFrameworkNetCoreDesktop)' or '$(TargetFramework)' == '$(TargetFrameworkNetCoreServer)' or '$(TargetFramework)' == '$(TargetFrameworkNetCore3)' ">
     <DefineConstants>$(DefineConstants);NET_CORE_RUNTIME</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == '$(TargetFrameworkUap)' ">
@@ -27,4 +28,5 @@
   <ItemGroup>
     <ReferenceAssemblyProjectReference Include="..\Microsoft.Identity.Client.Ref\Microsoft.Identity.Client.Ref.csproj" />
   </ItemGroup>
+  
 </Project>
