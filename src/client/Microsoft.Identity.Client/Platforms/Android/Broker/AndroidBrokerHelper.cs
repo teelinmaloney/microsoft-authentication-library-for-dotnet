@@ -484,7 +484,7 @@ namespace Microsoft.Identity.Client.Platforms.Android.Broker
             bundle.PutString(BrokerConstants.BrokerRequestV2, request);
             bundle.PutInt(BrokerConstants.CallerInfoUID, Binder.CallingUid);
 
-            _logger.Info("MSAL.Xamarin interactive broker request: " + request);
+            _logger.Info("MSAL.Xamarin silent broker request: " + request);
             return bundle;
         }
 
