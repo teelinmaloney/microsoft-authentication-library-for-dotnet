@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Security.Authentication.Web.Core;
@@ -132,6 +133,12 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
         void ShowAddAccountForWindowAsync(IntPtr appWindow,  ref Guid riid, out IntPtr result);
     }
 
+    [Guid("81EA942C-4F09-4406-A538-838D9B14B7E6")]
+    internal interface IAccountsSettingPane
+    {
+
+    }
+
     //Helper to initialize AccountsSettingsPane
     internal static class AccountsSettingsPaneInterop
     {
@@ -141,8 +148,9 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             IAccountsSettingsPaneInterop accountsSettingsPaneInterop =
                 AccountsSettingsPane.As<IAccountsSettingsPaneInterop>();
             //Guid guid = typeof(AccountsSettingsPane).GUID;
-            Guid guid = WinRT.GuidGenerator.CreateIID(typeof(AccountsSettingsPane));
-           
+            Guid guid = //WinRT.GuidGenerator.CreateIID(typeof(IAccountsSettingPane));
+                Guid.Parse("81EA942C-4F09-4406-A538-838D9B14B7E6");
+
 
 
             //IAccountsSettingsPaneInterop accountsSettingsPaneInterop = 
