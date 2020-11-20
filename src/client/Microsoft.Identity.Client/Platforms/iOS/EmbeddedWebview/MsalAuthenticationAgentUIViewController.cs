@@ -42,12 +42,12 @@ namespace Microsoft.Identity.Client.Platforms.iOS.EmbeddedWebview
 
             EvaluateJava();
 
-            this.View.AddSubview(_wkWebView);
+            View.AddSubview(_wkWebView);
 
-            this.NavigationItem.LeftBarButtonItem = new UIBarButtonItem(UIBarButtonSystemItem.Cancel,
+            NavigationItem.LeftBarButtonItem = new UIBarButtonItem(UIBarButtonSystemItem.Cancel,
                 CancelAuthentication);
 
-            _wkWebView.LoadRequest(new NSUrlRequest(new NSUrl(this._url)));
+            _wkWebView.LoadRequest(new NSUrlRequest(new NSUrl(_url)));
         }
 
         protected WKWebView PrepareWKWebView()

@@ -24,11 +24,11 @@ namespace Microsoft.Identity.Client.Platforms.iOS.EmbeddedWebview
         {
             AuthenticationContinuationHelper.LastRequestLogger = requestContext.Logger;
             requestContext.Logger.InfoPii(
-                $"Starting the iOS embedded webui. Start Uri: {authorizationUri} Redirect URI:{redirectUri} ",
-                $"Starting the iOS embedded webui. Redirect URI: {redirectUri}"); 
+                $"Starting the iOS embedded web UI. Start Uri: {authorizationUri} Redirect URI:{redirectUri} ",
+                $"Starting the iOS embedded web UI. Redirect URI: {redirectUri}"); 
                 
             s_returnedUriReady = new SemaphoreSlim(0);
-            Authenticate(authorizationUri, redirectUri, requestContext);
+            Authenticate(authorizationUri, redirectUri);
             await s_returnedUriReady.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             return s_authorizationResult;
@@ -40,21 +40,21 @@ namespace Microsoft.Identity.Client.Platforms.iOS.EmbeddedWebview
             s_returnedUriReady.Release();
         }
 
-        public void Authenticate(Uri authorizationUri, Uri redirectUri, RequestContext requestContext)
+        public void Authenticate(Uri authorizationUri, Uri redirectUri)
         {
             UIViewController viewController = null;
             InvokeOnMainThread(() =>
             {
                 UIWindow window = UIApplication.SharedApplication.KeyWindow;
-                viewController = CoreUIParent.FindCurrentViewController(window.RootViewController);
+                viewController = CoreUIParent.FindCurrentViewController(window?.RootViewController);
             });
 
             try
             {
-                viewController.InvokeOnMainThread(() =>
+                viewController?.InvokeOnMainThread(() =>
                 {
                     var navigationController =
-                        new MsalAuthenticationAgentUINavigationController(authorizationUri.AbsoluteUri,
+                        new MsalAuthenticationAgentUINavigationController(authorizationUri?.AbsoluteUri,
                             redirectUri.OriginalString, CallbackMethod, CoreUIParent.PreferredStatusBarStyle)
                         {
                             ModalPresentationStyle = CoreUIParent.ModalPresentationStyle,
