@@ -308,7 +308,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             //return 
             //    authenticationRequestParameters.ExtraQueryParameters.TryGetValue("msal_msa_pt", out string val) &&
             //    string.Equals("1", val);
-            return false;
+            return true;
         }
 
         public async Task<MsalTokenResponse> AcquireTokenSilentAsync(
