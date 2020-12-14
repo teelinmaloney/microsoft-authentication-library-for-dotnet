@@ -18,6 +18,7 @@ using Microsoft.Identity.Client.UI;
 using Windows.Foundation.Metadata;
 using Windows.Security.Authentication.Web.Core;
 using Windows.Security.Credentials;
+using System.Diagnostics;
 
 #if DESKTOP || NET5_WIN
 using Microsoft.Identity.Client.Platforms.Features.Windows;
@@ -233,6 +234,18 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                 bool isConsumerTenant = string.Equals(accountProvider.Authority, "consumers", StringComparison.OrdinalIgnoreCase);
                 wamPlugin = (isConsumerTenant) ? _msaPlugin : _aadPlugin;
 
+                WebTokenRequest request = new WebTokenRequest(
+                     accountProvider,
+                     "service::http://Passport.NET/purpose::PURPOSE_AAD_WAM_TRANSFER",
+                     authenticationRequestParameters.ClientId,
+                     WebTokenRequestPromptType.Default);
+
+                var res = await _wamProxy.RequestTokenForWindowAsync(_parentHandle, request).ConfigureAwait(false);
+                string code = ParseSuccesfullWamResponse(res.ResponseData[0]);
+
+
+
+
 #if WINDOWS_APP
                 // UWP requires being on the UI thread
                 await _synchronizationContext;
@@ -245,6 +258,11 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                      isInteractive: true,
                      isAccountInWam: false)
                     .ConfigureAwait(true);
+
+                //request.Properties().Insert(L"SamlAssertion", to_hstring(transferToken));
+                //request.Properties().Insert(L"SamlAssertionType", to_hstring("SAMLV1"));
+                webTokenRequest.Properties.Add("SamlAssertion", code);
+                webTokenRequest.Properties.Add("SamlAssertionType", "SAMLV1");
 
                 AddCommonParamsToRequest(authenticationRequestParameters, webTokenRequest);
 
@@ -271,6 +289,102 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             }
 
             return CreateMsalTokenResponse(wamResult, wamPlugin, isInteractive: true);
+        }
+
+        private string ParseSuccesfullWamResponse(WebTokenResponse webTokenResponse)
+        {
+            string msaTokens = webTokenResponse.Token;
+            //if (string.IsNullOrEmpty(msaTokens))
+            //{
+            //    throw new MsalServiceException(
+            //        MsaErrorCode,
+            //        "Internal error - bad token format, msaTokens was unexpectedly empty");
+            //}
+
+            string accessToken = null, idToken = null, clientInfo = null, tokenType = null, scopes = null, correlationId = null;
+            long expiresIn = 0;
+
+            foreach (string keyValuePairString in msaTokens.Split('&'))
+            {
+                string[] keyValuePair = keyValuePairString.Split('=');
+                //if (keyValuePair.Length != 2)
+                //{
+                //    throw new MsalClientException(
+                //        MsaErrorCode,
+                //        "Internal error - bad token response format, expected '=' separated pair");
+                //}
+
+                if (keyValuePair[0] == "access_token")
+                {
+                    accessToken = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "id_token")
+                {
+                    idToken = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "token_type")
+                {
+                    tokenType = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "scope")
+                {
+                    scopes = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "client_info")
+                {
+                    clientInfo = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "expires_in")
+                {
+                    expiresIn = long.Parse(keyValuePair[1], CultureInfo.InvariantCulture);
+                }
+                else if (keyValuePair[0] == "correlation")
+                {
+                    correlationId = keyValuePair[1];
+                }
+                else if (keyValuePair[0] == "code")
+                {
+                    return keyValuePair[1];
+                }
+
+                else
+                {
+                    // TODO: C++ code saves the remaining properties, but I did not find a reason why                    
+                    Debug.WriteLine($"{keyValuePair[0]}={keyValuePair[1]}");
+                }
+            }
+
+            return null;
+
+            //if (string.IsNullOrEmpty(tokenType) || string.Equals("bearer", tokenType, System.StringComparison.OrdinalIgnoreCase))
+            //{
+            //    tokenType = "Bearer";
+            //}
+
+            //if (string.IsNullOrEmpty(scopes))
+            //{
+            //    throw new MsalClientException(
+            //        MsaErrorCode,
+            //        "Internal error - bad token response format, no scopes");
+            //}
+
+            //var responseScopes = scopes.Replace("%20", " ");
+
+            //MsalTokenResponse msalTokenResponse = new MsalTokenResponse()
+            //{
+            //    AccessToken = accessToken,
+            //    IdToken = idToken,
+            //    CorrelationId = correlationId,
+            //    Scope = responseScopes,
+            //    ExpiresIn = expiresIn,
+            //    ExtendedExpiresIn = 0, // not supported on MSA
+            //    ClientInfo = clientInfo,
+            //    TokenType = tokenType,
+            //    WamAccountId = webTokenResponse.WebAccount.Id,
+            //    TokenSource = TokenSource.Broker
+            //};
+
+            //return msalTokenResponse;
         }
 
         private IntPtr GetParentWindow(CoreUIParent uiParent)
