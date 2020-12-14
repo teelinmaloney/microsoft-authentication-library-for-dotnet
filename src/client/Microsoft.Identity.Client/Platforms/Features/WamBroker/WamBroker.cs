@@ -231,7 +231,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
 
                 // WAM returns the tenant here, not the full authority
                 bool isConsumerTenant = string.Equals(accountProvider.Authority, "consumers", StringComparison.OrdinalIgnoreCase);
-                wamPlugin = (isConsumerTenant && !isMsaPassthrough) ? _msaPlugin : _aadPlugin;
+                wamPlugin = (isConsumerTenant) ? _msaPlugin : _aadPlugin;
 
 #if WINDOWS_APP
                 // UWP requires being on the UI thread
