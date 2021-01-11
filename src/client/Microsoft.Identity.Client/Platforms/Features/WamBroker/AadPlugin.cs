@@ -222,5 +222,16 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             return "WAM_unexpected_aad_error";
         }
 
+        // needed only for MSA-Passthrough, implemented only by MSAPlugin
+        public Task<WebTokenRequest> CreateWebTokenRequestAsync(WebAccountProvider provider, string clientId, string scopes)
+        {
+            throw new NotImplementedException();
+        }
+
+        // needed only for MSA-Passthrough, implemented only by MSAPlugin
+        public IDictionary<string, string> ParseNonTokenResponse(WebTokenResponse webTokenResponse)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

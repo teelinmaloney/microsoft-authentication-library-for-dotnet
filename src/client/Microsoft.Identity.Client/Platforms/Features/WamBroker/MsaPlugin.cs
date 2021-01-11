@@ -75,9 +75,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                 }
             }
 
-            request.Properties.Add("api-version", "2.0"); // request V2 tokens over V1
-            request.Properties.Add("oauth2_batch", "1"); // request tokens as OAuth style name/value pairs
-            request.Properties.Add("x-client-info", "1"); // request client_info
+            AddV2Properties(request);
 
             if (ApiInformation.IsPropertyPresent("Windows.Security.Authentication.Web.Core.WebTokenRequest", "CorrelationId"))
             {
@@ -89,6 +87,25 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             }
 
             return request;
+        }
+
+        public Task<WebTokenRequest> CreateWebTokenRequestAsync(WebAccountProvider provider, string clientId, string scopes)
+        {
+            WebTokenRequest request = new WebTokenRequest(
+               provider,
+               scopes,
+               clientId,
+               WebTokenRequestPromptType.Default);
+
+            AddV2Properties(request);
+
+            return Task.FromResult(request);
+        }
+        private static void AddV2Properties(WebTokenRequest request)
+        {
+            request.Properties.Add("api-version", "2.0"); // request V2 tokens over V1
+            request.Properties.Add("oauth2_batch", "1"); // request tokens as OAuth style name/value pairs
+            request.Properties.Add("x-client-info", "1"); // request client_info
         }
 
         public string GetHomeAccountIdOrNull(WebAccount webAccount)
@@ -226,12 +243,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                 else if (keyValuePair[0] == "correlation")
                 {
                     correlationId = keyValuePair[1];
-                }
-                //else
-                //{
-                //    // TODO: C++ code saves the remaining properties, but I did not find a reason why                    
-                //    Debug.WriteLine($"{keyValuePair[0]}={keyValuePair[1]}");
-                //}
+                }               
             }
 
             if (string.IsNullOrEmpty(tokenType) || string.Equals("bearer", tokenType, System.StringComparison.OrdinalIgnoreCase))
@@ -263,6 +275,34 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             };
 
             return msalTokenResponse;
-        }      
+        }
+
+        public IDictionary<string, string> ParseNonTokenResponse(WebTokenResponse webTokenResponse)
+        {
+            string msaTokens = webTokenResponse.Token;
+            if (string.IsNullOrEmpty(msaTokens))
+            {
+                throw new MsalServiceException(
+                    MsaErrorCode,
+                    "Internal error - bad token format, msaTokens was unexpectedly empty");
+            }
+
+            var response = new Dictionary<string, string>();
+
+            foreach (string keyValuePairString in msaTokens.Split('&'))
+            {
+                string[] keyValuePair = keyValuePairString.Split('=');
+                if (keyValuePair.Length != 2)
+                {
+                    throw new MsalClientException(
+                        MsaErrorCode,
+                        "Internal error - bad token response format, expected '=' separated pair");
+                }
+
+                response.Add(keyValuePair[0], keyValuePair[1]);
+            }
+
+            return response;
+        }
     }
 }

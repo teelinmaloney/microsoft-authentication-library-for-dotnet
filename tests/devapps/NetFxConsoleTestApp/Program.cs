@@ -38,7 +38,7 @@ namespace NetFx
     },  
   }";
         // This app has http://localhost redirect uri registered
-        private static readonly string s_clientIdForPublicApp = "b16e7986-f7dd-4a31-96d7-d24445a38b4b";
+        private static readonly string s_clientIdForPublicApp = "c0186a6c-0bfc-4d83-9543-c2295b676f3b";
 
         private const string PoPValidatorEndpoint = "https://signedhttprequest.azurewebsites.net/api/validateSHR";
         private const string PoPUri = "https://www.contoso.com/path1/path2?queryParam1=a&queryParam2=b";
@@ -65,7 +65,7 @@ namespace NetFx
             Environment.GetEnvironmentVariable("POP_VALIDATIONAPI_SECRET");
 
         private static readonly string s_username = ""; // used for WIA and U/P, cannot be empty on .net core
-        private static readonly IEnumerable<string> s_scopes = new[] { "User.Read",  };
+        private static readonly IEnumerable<string> s_scopes = new[] { "api://51eb3dd6-d8b5-46f3-991d-b1d4870de7de/myaccess",  };
 
         private const string GraphAPIEndpoint = "https://graph.microsoft.com/v1.0/me";
 
@@ -74,7 +74,7 @@ namespace NetFx
 
 
         private static readonly string[] s_authorities = new[]  {
-            "https://login.microsoftonline.com/common",
+            "https://login.microsoftonline.com/61411618-6f67-4fc5-ba6a-4a0fe32d4eec",
             "https://login.microsoftonline.com/organizations",
             "https://login.microsoftonline.com/49f548d0-12b7-4169-a390-bb5304d24462",
             "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47" };
@@ -116,9 +116,9 @@ namespace NetFx
             var builder = PublicClientApplicationBuilder
                             .Create(s_clientIdForPublicApp)
                             .WithAuthority(GetAuthority())
-                            .WithLogging(Log, LogLevel.Verbose, true)
+                            .WithLogging(Log, LogLevel.Verbose, true);
                             //.WithClientCapabilities(new[] { "llt" })
-                            .WithRedirectUri("http://localhost"); // required for DefaultOsBrowser
+                            //.WithRedirectUri("http://localhost"); // required for DefaultOsBrowser
 
             if (s_useBroker)
             {

@@ -229,11 +229,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
 
         private async Task<MsalTokenResponse> AcquireInteractiveWithPickerAsync(
             AuthenticationRequestParameters authenticationRequestParameters)
-        {            
-            // assume AAD only
-
-
-
+        {
             bool isMsaPassthrough = IsMsaPassthrough(authenticationRequestParameters);
             var accountPicker = _accountPickerFactory.Create(
                 _parentHandle,
@@ -256,13 +252,64 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
 
                 // WAM returns the tenant here, not the full authority
                 bool isConsumerTenant = string.Equals(accountProvider.Authority, "consumers", StringComparison.OrdinalIgnoreCase);
-                wamPlugin = (isConsumerTenant && !isMsaPassthrough) ? _msaPlugin : _aadPlugin;
+
+                string transferToken = null;
+
+                // for MSA-PT, the AAD plugin needs to handle the this but it needs a special transfer token first
+                if (isConsumerTenant && isMsaPassthrough)
+                {
+                    var webTokenRequestMsa = await _msaPlugin.CreateWebTokenRequestAsync(
+                      accountProvider,
+                      authenticationRequestParameters,
+                      isForceLoginPrompt: false,
+                      isInteractive: true,
+                      isAccountInWam: false)
+                     .ConfigureAwait(false);
+
 
 #if WINDOWS_APP
-                // UWP requires being on the UI thread
                 await _synchronizationContext;
 #endif
+                    var webTokenResponseMsa = await _wamProxy.RequestTokenForWindowAsync(_parentHandle, webTokenRequestMsa)
+                        .ConfigureAwait(true);
 
+                    if (webTokenResponseMsa.ResponseStatus != WebTokenRequestStatus.Success)
+                    {
+                        var errorResp = CreateMsalTokenResponse(webTokenResponseMsa, _msaPlugin, true);
+                        throw new MsalServiceException(
+                            errorResp.Error,
+                            "Error fetching the MSA-PT initial token - " + errorResp.ErrorDescription);
+                    }
+
+                    transferToken = await FetchMsaPassthroughTransferTokenAsync(                        
+                        accountProvider,
+                        authenticationRequestParameters.ClientId).ConfigureAwait(true);
+
+                    var aadRequest = await _aadPlugin.CreateWebTokenRequestAsync(
+                        accountProvider,
+                        authenticationRequestParameters,
+                        isForceLoginPrompt: false,
+                        isInteractive: true,
+                        isAccountInWam: true)
+                       .ConfigureAwait(true);
+                    AddCommonParamsToRequest(authenticationRequestParameters, webTokenRequestMsa);
+
+                    var wamResult2 = await 
+                        _wamProxy.RequestTokenForWindowAsync(
+                            _parentHandle, 
+                            aadRequest, 
+                            webTokenResponseMsa.ResponseData[0].WebAccount)
+                        .ConfigureAwait(false);
+
+                    
+                    return CreateMsalTokenResponse(wamResult2, _aadPlugin, isInteractive: true);
+
+                }
+
+#if WINDOWS_APP
+                await _synchronizationContext;
+#endif
+                wamPlugin = (isConsumerTenant && !isMsaPassthrough) ? _msaPlugin : _aadPlugin;
                 webTokenRequest = await wamPlugin.CreateWebTokenRequestAsync(
                      accountProvider,
                      authenticationRequestParameters,
@@ -270,6 +317,12 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
                      isInteractive: true,
                      isAccountInWam: false)
                     .ConfigureAwait(true);
+
+                if (!string.IsNullOrEmpty(transferToken))
+                {
+                    webTokenRequest.Properties.Add("SamlAssertion", transferToken);
+                    webTokenRequest.Properties.Add("SamlAssertionType", "SAMLV1");
+                }
 
                 AddCommonParamsToRequest(authenticationRequestParameters, webTokenRequest);
 
@@ -296,6 +349,39 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             }
 
             return CreateMsalTokenResponse(wamResult, wamPlugin, isInteractive: true);
+        }
+
+        private async Task<string> FetchMsaPassthroughTransferTokenAsync(
+            WebAccountProvider accountProvider, 
+            string clientId)
+        {
+#if WINDOWS_APP
+                    await _synchronizationContext;
+#endif
+            var transferTokenRequest = await _msaPlugin.CreateWebTokenRequestAsync(
+                      accountProvider,
+                      clientId,
+                      "service::http://Passport.NET/purpose::PURPOSE_AAD_WAM_TRANSFER")
+                      .ConfigureAwait(true);
+
+            //transferTokenRequest.Properties.Add(
+            //              "authority",
+            //              "https://login.microsoftonline.com/consumers");            
+
+            var transferResponse = await _wamProxy.RequestTokenForWindowAsync(_parentHandle, transferTokenRequest)
+                .ConfigureAwait(false);
+            if (transferResponse.ResponseStatus != WebTokenRequestStatus.Success)
+            {
+                var errorResp = CreateMsalTokenResponse(transferResponse, _msaPlugin, true);
+                throw new MsalServiceException(
+                    errorResp.Error, 
+                    "Error fetching the MSA-PT transfer token - " + errorResp.ErrorDescription);
+            }
+
+            // var result = wamPlugin.ParseNonTokenResponse(transferResponse.ResponseData[0]);
+
+            // return result["code"];
+            return transferResponse.ResponseData[0].Token;
         }
 
         private IntPtr GetParentWindow(CoreUIParent uiParent)
@@ -333,7 +419,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             //return 
             //    authenticationRequestParameters.ExtraQueryParameters.TryGetValue("msal_msa_pt", out string val) &&
             //    string.Equals("1", val);
-            return false;
+            return true;
         }
 
         public async Task<MsalTokenResponse> AcquireTokenSilentAsync(
@@ -396,7 +482,7 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             return provider;
         }
 
-      
+
 
         public async Task<MsalTokenResponse> AcquireTokenSilentDefaultUserAsync(
             AuthenticationRequestParameters authenticationRequestParameters,

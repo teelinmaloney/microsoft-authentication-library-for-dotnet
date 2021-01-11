@@ -20,7 +20,13 @@ namespace Microsoft.Identity.Client.Platforms.Features.WamBroker
             bool isInteractive,
             bool isAccountInWam);
 
+        Task<WebTokenRequest> CreateWebTokenRequestAsync(
+            WebAccountProvider provider,
+            string clientId,
+            string scopes);
+
         MsalTokenResponse ParseSuccesfullWamResponse(WebTokenResponse webTokenResponse);
+        IDictionary<string, string> ParseNonTokenResponse(WebTokenResponse webTokenResponse);
 
         string MapTokenRequestError(WebTokenRequestStatus status, uint errorCode, bool isInteractive);
         string GetHomeAccountIdOrNull(WebAccount webAccount);
