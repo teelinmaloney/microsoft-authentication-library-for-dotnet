@@ -24,9 +24,9 @@ variables:
 steps:
 
 - task: UseDotNet@2
-  displayName: 'Use .Net Core sdk 2.2.402'
+  displayName: 'Use .Net Core sdk 3.x'
   inputs:
-    version: 2.2.402
+    version: 3.x
 
 # Run pre-build code analysis (policheck, credscan, etc)
 - template: template-prebuild-code-analysis.yaml
